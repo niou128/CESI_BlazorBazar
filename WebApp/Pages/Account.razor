@@ -1,7 +1,10 @@
 ﻿@page "/account"
 
 @inject UserServiceClient UserService
+@inject OrderServiceClient OrderService
+@inject ProductServiceClient ProductService
 @inject IJSRuntime JSRuntime
+@using OrderService
 
 <h3>Mon Compte</h3>
 
@@ -22,6 +25,32 @@
     <div>
         Bienvenue, @Username !
         <button @onclick="Logout">Se déconnecter</button>
+
+        <h4>Vos commandes :</h4>
+        @if (UserOrders.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Produit</th>
+                        <th>Quantité</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in UserOrders)
+                    {
+                        <tr>
+                            <td>@ProductNames[order.ProductId]</td>
+                            <td>@order.Quantity</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>Aucune commande n'a été effectuée.</p>
+        }
     </div>
 }
 else
@@ -54,6 +83,8 @@ else
     private bool IsLoggedIn { get; set; } = false;
     private bool RegistrationSuccess { get; set; } = false;
     private string ErrorMessage { get; set; }
+    private List<OrderReply> UserOrders { get; set; } = new List<OrderReply>();
+    private Dictionary<int, string> ProductNames = new Dictionary<int, string>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,21 +92,60 @@ else
         IsLoggedIn = !string.IsNullOrEmpty(token);
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadUserOrders();
+    }
+
+    private async Task LoadUserOrders()
+    {
+        await EnsureUserLoggedInAndLoadOrders();
+        await LoadProductNames();
+    }
+
+    private async Task LoadProductNames()
+    {
+        var products = await ProductService.GetProducts();
+        ProductNames = products.ToDictionary(p => p.Id, p => p.Name);
+    }
+
     private async Task Login()
     {
         try
         {
             var token = await UserService.Login(Username, Password);
-            if (token != null)
+            if (!string.IsNullOrEmpty(token))
             {
-                IsLoggedIn = true;
-                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "jwtToken", token);
-                ErrorMessage = null;
+                await FinalizeLogin(token);
             }
         }
         catch (HttpRequestException ex)
         {
             ErrorMessage = "Erreur lors de la connexion. Veuillez vérifier vos identifiants.";
+        }
+    }
+
+    private async Task FinalizeLogin(string token)
+    {
+        IsLoggedIn = true;
+        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "jwtToken", token);
+        ErrorMessage = null;
+        await EnsureUserLoggedInAndLoadOrders();
+    }
+
+    private async Task EnsureUserLoggedInAndLoadOrders()
+    {
+        var token = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "jwtToken");
+        IsLoggedIn = !string.IsNullOrEmpty(token);
+        UserOrders.Clear();
+
+        if (IsLoggedIn)
+        {
+            var userId = UserService.GetUserIdFromToken(token);
+            if (userId.HasValue)
+            {
+                UserOrders = await OrderService.GetOrdersForUser(userId.Value.ToString());
+            }
         }
     }
 
