@@ -1,6 +1,7 @@
 ﻿@page "/products"
 
 @inject ProductServiceClient ProductService
+@inject CartService CartService
 
 <ul>
     @if (products != null)
@@ -12,6 +13,10 @@
                 @if (product.Stock == 0)
                 {
                     <span>Rupture de stock</span>
+                }
+                else
+                {
+                    <button @onclick="() => AddToCart(product)">Ajouter au panier</button>
                 }
             </li>
         }
@@ -25,5 +30,10 @@
     protected override async Task OnInitializedAsync()
     {
         products = await ProductService.GetProducts();
+    }
+
+    private void AddToCart(Product product)
+    {
+        CartService.AddToCart(product);
     }
 }
