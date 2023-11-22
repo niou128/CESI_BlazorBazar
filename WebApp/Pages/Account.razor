@@ -1,0 +1,95 @@
+﻿@page "/account"
+
+@inject UserServiceClient UserService
+@inject IJSRuntime JSRuntime
+
+<h3>Mon Compte</h3>
+
+@if (RegistrationSuccess)
+{
+    <div class="alert alert-success">
+        Vous vous êtes inscrit avec succès ! Veuillez vous connecter.
+    </div>
+}
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger">
+        @ErrorMessage
+    </div>
+}
+@if (IsLoggedIn)
+{
+    <div>
+        Bienvenue, @Username !
+        <button @onclick="Logout">Se déconnecter</button>
+    </div>
+}
+else
+{
+    <div>
+        <h4>Connexion</h4>
+        <label>Username: </label>
+        <input @bind="Username" />
+        <label>Password: </label>
+        <input type="password" @bind="Password" />
+        <button @onclick="Login">Se connecter</button>
+
+        <h4>Créer un compte</h4>
+        <label>Username: </label>
+        <input @bind="NewUsername" />
+        <label>Password: </label>
+        <input type="password" @bind="NewPassword" />
+        <label>Email:</label>
+        <input type="email" @bind="NewEmail" />
+        <button @onclick="Register">S'inscrire</button>
+    </div>
+}
+
+@code {
+    private string Username { get; set; } = "";
+    private string Password { get; set; } = "";
+    private string NewUsername { get; set; } = "";
+    private string NewPassword { get; set; } = "";
+    private string NewEmail { get; set; } = "";
+    private bool IsLoggedIn { get; set; } = false;
+    private bool RegistrationSuccess { get; set; } = false;
+    private string ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "jwtToken");
+        IsLoggedIn = !string.IsNullOrEmpty(token);
+    }
+
+    private async Task Login()
+    {
+        try
+        {
+            var token = await UserService.Login(Username, Password);
+            if (token != null)
+            {
+                IsLoggedIn = true;
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "jwtToken", token);
+                ErrorMessage = null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            ErrorMessage = "Erreur lors de la connexion. Veuillez vérifier vos identifiants.";
+        }
+    }
+
+    private async Task Register()
+    {
+        var user = new User { Username = NewUsername, Password = NewPassword, Email = NewEmail };
+        await UserService.Register(user);
+        RegistrationSuccess = true;
+    }
+
+    private async Task Logout()
+    {
+        IsLoggedIn = false;
+        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "jwtToken");
+    }
+
+}
