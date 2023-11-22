@@ -1,0 +1,43 @@
+﻿@using System.Linq
+@inject ProductServiceClient ProductService
+
+<section class="my-5">
+    <h2 class="display-5">Produits en vedette</h2>
+    <div class="row">
+        @if (featuredProducts == null)
+        {
+            <p>Loading products...</p>
+        }
+        else
+        {
+            foreach (var product in featuredProducts)
+            {
+                <div class="col-md-4">
+                    <div class="card">
+                        <img src="https://via.placeholder.com/300x200?text=@product.Name" class="card-img-top" alt="@product.Name">
+                        <div class="card-body">
+                            <h5 class="card-title">@product.Name</h5>
+                            <p class="card-text">@product.Description</p>
+                            <p class="card-text">Prix: @product.Price.ToString("C")</p>
+                            <p class="card-text">Quantité: @product.Stock</p>
+                            <a href="#" class="btn btn-primary">Voir détails</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</section>
+
+
+
+@code {
+    private Product[] featuredProducts;
+    private static Random random = new Random();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var allProducts = await ProductService.GetProducts();
+        featuredProducts = allProducts.OrderBy(x => random.Next()).Take(3).ToArray();
+    }
+}

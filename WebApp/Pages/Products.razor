@@ -1,0 +1,29 @@
+﻿@page "/products"
+
+@inject ProductServiceClient ProductService
+
+<ul>
+    @if (products != null)
+    {
+        foreach (var product in products)
+        {
+            <li>
+                @product.Name - @product.Price € - @product.Stock en stock
+                @if (product.Stock == 0)
+                {
+                    <span>Rupture de stock</span>
+                }
+            </li>
+        }
+    }
+
+</ul>
+
+@code {
+    private Product[] products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await ProductService.GetProducts();
+    }
+}

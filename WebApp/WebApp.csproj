@@ -19,8 +19,4 @@
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="7.0.3" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Components\" />
-  </ItemGroup>
-
 </Project>
