@@ -36,6 +36,8 @@
         "ASPNETCORE_URLS": "https://+:443;http://+:80"
       },
       "publishAllPorts": true,
+      "httpPort": 32787,
+      "sslPort": 32788,
       "useSSL": true
     }
   },
