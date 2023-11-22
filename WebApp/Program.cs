@@ -26,5 +26,6 @@ builder.Services.AddScoped(services =>
 builder.Services.AddScoped<UserServiceClient>();
 builder.Services.AddScoped<ProductServiceClient>();
 builder.Services.AddScoped<OrderServiceClient>();
+builder.Services.AddSingleton<CartService>();
 
 await builder.Build().RunAsync();

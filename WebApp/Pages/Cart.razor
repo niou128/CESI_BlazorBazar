@@ -1,0 +1,95 @@
+﻿@page "/cart"
+@using Grpc.Core;
+@using OrderService;
+
+@inject CartService CartService
+@inject IJSRuntime JSRuntime
+@inject UserServiceClient UserService
+@inject OrderServiceClient OrderService
+
+<h3>Mon panier</h3>
+
+@if (CartService.CartItems.Count == 0)
+{
+    <p>Panier vide</p>
+}
+else
+{
+    <ul>
+        @foreach (var product in CartService.CartItems)
+        {
+            <li>@product.Name - @product.Price €</li>
+        }
+    </ul>
+    @if (IsLoggedIn)
+    {
+        <button @onclick="PlaceOrder">Commander</button>
+    }
+    <button @onclick="EmptyCart">Vider le panier</button>
+}
+
+@code {
+    private bool IsLoggedIn { get; set; }
+    private string ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckIfUserIsLoggedIn();
+    }
+
+    private async Task CheckIfUserIsLoggedIn()
+    {
+        var token = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", new object[] { "jwtToken" });
+        IsLoggedIn = !string.IsNullOrEmpty(token) && ValidateToken(token);
+        // Si vous avez besoin de l'ID de l'utilisateur, récupérez-le ici aussi
+    }
+
+    private bool ValidateToken(string token)
+    {
+        return true;
+    }
+
+    private void EmptyCart()
+    {
+        CartService.EmptyCart();
+    }
+
+    private async Task PlaceOrder()
+    {
+        if (!IsLoggedIn)
+        {
+            ErrorMessage = "Vous devez être connecté pour passer une commande.";
+            return;
+        }
+
+        var token = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "jwtToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            ErrorMessage = "Session expirée, veuillez vous reconnecter.";
+            return;
+        }
+
+        var userId = UserService.GetUserIdFromToken(token);
+        if (!userId.HasValue)
+        {
+            ErrorMessage = "Erreur lors de la récupération de l'ID de l'utilisateur.";
+            return;
+        }
+
+        foreach (var product in CartService.CartItems)
+        {
+            var orderRequest = new OrderRequest
+                {
+                    ProductId = product.Id,
+                    Quantity = 1,
+                    UserId = userId.ToString()
+                };
+
+            var orderReply = await OrderService.PlaceOrderAsync(orderRequest);
+        }
+
+        CartService.EmptyCart();
+        ErrorMessage = "Commande effectuée avec succès!";
+    }
+
+}
